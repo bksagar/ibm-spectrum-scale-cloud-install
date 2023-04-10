@@ -296,3 +296,35 @@ variable "bastion_user" {
   default     = "ubuntu"
   description = "Provide the username for Bastion login."
 }
+
+variable "default_metadata_replicas" {
+  type = number
+  nullable    = true
+  default     = null
+  description = "check"
+}
+
+variable "default_data_replicas" {
+  type = number
+  nullable    = true
+  default     = null
+  description = "check default"
+}
+
+variable "max_metadata_replicas" {
+  type = number
+  default = 2
+  description = ""
+}
+
+variable "max_data_replicas" {
+  type = number
+  default = 2
+}
+
+variable "disk_type" {
+  type = string
+  nullable    = true
+  default     = null
+  description = "disk type"
+}

@@ -452,9 +452,17 @@ def initialize_scale_config_details(node_classes, param_key, param_value):
     return scale_config
 
 
-def get_disks_list(az_count, disk_mapping, desc_disk_mapping):
+def get_disks_list(az_count, disk_mapping, desc_disk_mapping,disk_type):
     """ Initialize disk list. """
     disks_list = []
+    if disk_type == "locally-attached":
+        failureGroup = 0
+        for each_ip, disk_per_ip in disk_mapping.items():
+            failureGroup = failureGroup + 1
+            for each_disk in disk_per_ip:
+                disks_list.append({"device": each_disk,
+                                   "failureGroup": failureGroup, "servers": each_ip,
+                                   "usage": "dataAndMetadata", "pool": "system"})
 
     # Map storage nodes to failure groups based on AZ and subnet variations
     failure_group1, failure_group2 = [], []
@@ -508,24 +516,27 @@ def get_disks_list(az_count, disk_mapping, desc_disk_mapping):
     return disks_list
 
 
-def initialize_scale_storage_details(az_count, fs_mount, block_size, disk_details):
+def initialize_scale_storage_details(az_count, fs_mount, block_size, disk_details, default_metadata_replicas, max_metadata_replicas, default_data_replicas, max_data_replicas):
     """ Initialize storage details.
     :args: az_count (int), fs_mount (string), block_size (string),
            disks_list (list)
     """
     storage = {}
     storage['scale_storage'] = []
-    if az_count > 1:
-        data_replicas = 2
-        metadata_replicas = 2
-    else:
-        data_replicas = 1
-        metadata_replicas = 2
+    if not default_data_replicas:
+        if az_count > 1:
+           default_data_replicas = 2
+           default_metadata_replicas = 2
+        else:
+           default_data_replicas = 1
+           default_metadata_replicas = 2
 
     storage['scale_storage'].append({"filesystem": pathlib.PurePath(fs_mount).name,
                                      "blockSize": block_size,
-                                     "defaultDataReplicas": data_replicas,
-                                     "defaultMetadataReplicas": metadata_replicas,
+                                     "defaultDataReplicas": default_data_replicas,
+                                     "defaultMetadataReplicas": default_metadata_replicas,
+                                     "maxDataReplicas": max_data_replicas,
+                                     "maxMetadataReplicas": max_metadata_replicas,
                                      "automaticMountOption": "true",
                                      "defaultMountPoint": fs_mount,
                                      "disks": disk_details})
@@ -551,6 +562,15 @@ if __name__ == "__main__":
     PARSER.add_argument('--memory_size', help='Instance memory size')
     PARSER.add_argument('--max_pagepool_gb', help='maximum pagepool size in GB',
                         default=1)
+    PARSER.add_argument('--disk_type', help='maximum pagepool size in GB')
+    PARSER.add_argument('--default_data_replicas',
+                        help='maximum pagepool size in GB')
+    PARSER.add_argument('--max_data_replicas',
+                        help='maximum pagepool size in GB')
+    PARSER.add_argument('--default_metadata_replicas',
+                        help='maximum pagepool size in GB')
+    PARSER.add_argument('--max_metadata_replicas',
+                        help='maximum pagepool size in GB')
     PARSER.add_argument('--using_packer_image', help='skips gpfs rpm copy')
     PARSER.add_argument('--using_rest_initialization',
                         help='skips gui configuration')
@@ -792,11 +812,13 @@ if __name__ == "__main__":
     if cluster_type in ['storage', 'combined']:
         disks_list = get_disks_list(len(TF['vpc_availability_zones']),
                                     TF['storage_cluster_with_data_volume_mapping'],
-                                    TF['storage_cluster_desc_data_volume_mapping'])
+                                    TF['storage_cluster_desc_data_volume_mapping'],
+                                    ARGUMENTS.disk_type)
         scale_storage = initialize_scale_storage_details(len(TF['vpc_availability_zones']),
                                                          TF['storage_cluster_filesystem_mountpoint'],
                                                          TF['filesystem_block_size'],
-                                                         disks_list)
+                                                         disks_list, ARGUMENTS.default_metadata_replicas, ARGUMENTS.max_metadata_replicas,
+                                                         ARGUMENTS.default_data_replicas, ARGUMENTS.max_data_replicas)
         with open("%s/%s/%s/%s" % (ARGUMENTS.install_infra_path,
                                    "ibm-spectrum-scale-install-infra",
                                    "group_vars",

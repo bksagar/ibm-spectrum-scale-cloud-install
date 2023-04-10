@@ -409,6 +409,11 @@ module "storage_cluster_configuration" {
   meta_private_key             = module.generate_storage_cluster_keys.private_key_content
   scale_version                = local.scale_version
   spectrumscale_rpms_path      = var.spectrumscale_rpms_path
+  default_data_replicas        = var.default_data_replicas
+  default_metadata_replicas    = var.max_metadata_replicas
+  max_data_replicas            = var.max_data_replicas
+  max_metadata_replicas        = var.max_metadata_replicas
+  disk_type                    = var.disk_type
 }
 
 module "combined_cluster_configuration" {
