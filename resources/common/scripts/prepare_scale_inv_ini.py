@@ -465,54 +465,55 @@ def get_disks_list(az_count, disk_mapping, desc_disk_mapping,disk_type):
                                    "usage": "dataAndMetadata", "pool": "system"})
 
     # Map storage nodes to failure groups based on AZ and subnet variations
-    failure_group1, failure_group2 = [], []
-    if az_count == 1:
-        # Single AZ, just split list equally
-        num_storage_nodes = len(list(disk_mapping))
-        mid_index = num_storage_nodes//2
-        failure_group1 = list(disk_mapping)[:mid_index]
-        failure_group2 = list(disk_mapping)[mid_index:]
     else:
-        # Multi AZ, split based on subnet match
-        subnet_pattern = re.compile(r'\d{1,3}\.\d{1,3}\.(\d{1,3})\.\d{1,3}')
-        subnet1A = subnet_pattern.findall(list(disk_mapping)[0])
-        for each_ip in disk_mapping:
-            current_subnet = subnet_pattern.findall(each_ip)
-            if current_subnet[0] == subnet1A[0]:
-                failure_group1.append(each_ip)
-            else:
-                failure_group2.append(each_ip)
+        failure_group1, failure_group2 = [], []
+        if az_count == 1:
+            # Single AZ, just split list equally
+            num_storage_nodes = len(list(disk_mapping))
+            mid_index = num_storage_nodes//2
+            failure_group1 = list(disk_mapping)[:mid_index]
+            failure_group2 = list(disk_mapping)[mid_index:]
+        else:
+            # Multi AZ, split based on subnet match
+            subnet_pattern = re.compile(r'\d{1,3}\.\d{1,3}\.(\d{1,3})\.\d{1,3}')
+            subnet1A = subnet_pattern.findall(list(disk_mapping)[0])
+            for each_ip in disk_mapping:
+                current_subnet = subnet_pattern.findall(each_ip)
+                if current_subnet[0] == subnet1A[0]:
+                    failure_group1.append(each_ip)
+                else:
+                    failure_group2.append(each_ip)
 
-    storage_instances = []
-    max_len = max(len(failure_group1), len(failure_group2))
-    idx = 0
-    while idx < max_len:
-        if idx < len(failure_group1):
-            storage_instances.append(failure_group1[idx])
+        storage_instances = []
+        max_len = max(len(failure_group1), len(failure_group2))
+        idx = 0
+        while idx < max_len:
+            if idx < len(failure_group1):
+                storage_instances.append(failure_group1[idx])
 
-        if idx < len(failure_group2):
-            storage_instances.append(failure_group2[idx])
+            if idx < len(failure_group2):
+                storage_instances.append(failure_group2[idx])
 
-        idx = idx + 1
+            idx = idx + 1
 
-    for each_ip, disk_per_ip in disk_mapping.items():
-        if each_ip in failure_group1:
-            for each_disk in disk_per_ip:
-                disks_list.append({"device": each_disk,
-                                   "failureGroup": 1, "servers": each_ip,
-                                   "usage": "dataAndMetadata", "pool": "system"})
-        if each_ip in failure_group2:
-            for each_disk in disk_per_ip:
-                disks_list.append({"device": each_disk,
-                                   "failureGroup": 2, "servers": each_ip,
-                                   "usage": "dataAndMetadata", "pool": "system"})
+        for each_ip, disk_per_ip in disk_mapping.items():
+            if each_ip in failure_group1:
+                for each_disk in disk_per_ip:
+                    disks_list.append({"device": each_disk,
+                                       "failureGroup": 1, "servers": each_ip,
+                                       "usage": "dataAndMetadata", "pool": "system"})
+            if each_ip in failure_group2:
+                for each_disk in disk_per_ip:
+                    disks_list.append({"device": each_disk,
+                                       "failureGroup": 2, "servers": each_ip,
+                                       "usage": "dataAndMetadata", "pool": "system"})
 
-    # Append "descOnly" disk details
-    if len(desc_disk_mapping.keys()):
-        disks_list.append({"device": list(desc_disk_mapping.values())[0][0],
-                           "failureGroup": 3,
-                           "servers": list(desc_disk_mapping.keys())[0],
-                           "usage": "descOnly", "pool": "system"})
+        # Append "descOnly" disk details
+        if len(desc_disk_mapping.keys()):
+            disks_list.append({"device": list(desc_disk_mapping.values())[0][0],
+                               "failureGroup": 3,
+                               "servers": list(desc_disk_mapping.keys())[0],
+                               "usage": "descOnly", "pool": "system"})
     return disks_list
 
 

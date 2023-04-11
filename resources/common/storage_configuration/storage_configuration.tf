@@ -39,7 +39,8 @@ locals {
   default_data_replicas    = var.default_data_replicas == null ? jsonencode("None") : jsonencode(var.default_metadata_replicas)
   storage_inventory_path   = format("%s/%s/storage_inventory.ini", var.clone_path, "ibm-spectrum-scale-install-infra")
   storage_playbook_path    = format("%s/%s/storage_cloud_playbook.yaml", var.clone_path, "ibm-spectrum-scale-install-infra")
-  using_direct_connection  = (tobool(var.using_direct_connection) == true && var.bastion_ssh_private_key == null && var.bastion_instance_public_ip == null) ? true : false
+  using_direct_connection  = (tobool(var.using_direct_connection) == true) ? true : false
+  #using_direct_connection  = (tobool(var.using_direct_connection) == true && var.bastion_ssh_private_key == null && var.bastion_instance_public_ip == null) ? true : false
 }
 
 resource "local_file" "create_storage_tuning_parameters" {
@@ -77,7 +78,7 @@ resource "local_sensitive_file" "write_meta_private_key" {
 }
 
 resource "null_resource" "prepare_ansible_inventory" {
-  count = (tobool(var.turn_on) == true && tobool(var.clone_complete) == true && tobool(var.write_inventory_complete) == true && tobool(local.using_direct_connection) == false) && var.bastion_instance_public_ip != null && var.bastion_ssh_private_key != null ? 1 : 0
+  count = (tobool(var.turn_on) == true && tobool(var.clone_complete) == true && tobool(var.write_inventory_complete) == true && tobool(local.using_direct_connection) == false) ? 1 : 0
   provisioner "local-exec" {
     interpreter = ["/bin/bash", "-c"]
     command     = "python3 ${local.ansible_inv_script_path} --tf_inv_path ${var.inventory_path} --install_infra_path ${var.clone_path} --instance_private_key ${local.storage_private_key} --bastion_user ${var.bastion_user} --bastion_ip ${var.bastion_instance_public_ip} --bastion_ssh_private_key ${var.bastion_ssh_private_key} --memory_size ${var.memory_size} --max_pagepool_gb ${var.max_pagepool_gb} --disk_type ${var.disk_type} --default_metadata_replicas ${local.default_metadata_replicas} --max_metadata_replicas ${var.max_metadata_replicas} --default_data_replicas ${local.default_data_replicas }  --max_data_replicas ${var.max_data_replicas} --using_packer_image ${var.using_packer_image} --using_rest_initialization ${var.using_rest_initialization} --gui_username ${var.storage_cluster_gui_username} --gui_password ${var.storage_cluster_gui_password}"
